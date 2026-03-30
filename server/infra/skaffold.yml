@@ -1,0 +1,29 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+manifests:
+    rawYaml:
+        - ./k8s/*
+build:
+    local:
+        push: false
+    artifacts:
+        - image: hassanattar/accounts-service
+          context: ..
+          docker:
+              dockerfile: Dockerfile
+          sync:
+              manual:
+                  - dest: .
+                    src: "../src/**/*.ts"
+deploy:
+    kubectl:
+        hooks:
+            before:
+                - host:
+                      command:
+                          [
+                              "kubectl",
+                              "apply",
+                              "-f",
+                              "https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.0-beta.0/deploy/static/provider/cloud/deploy.yaml"
+                          ]

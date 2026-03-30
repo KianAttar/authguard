@@ -1,0 +1,12 @@
+node_modules
+dist
+__MACOSX
+.DS_Store
+client
+test.ts
+.vscode
+.idea
+playground*.ts
+secrets
+*.env
+!dev.env

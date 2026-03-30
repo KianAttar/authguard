@@ -1,0 +1,43 @@
+recaptchaConfig:
+    # Google's confidence level (0.0 to 1.0) that an interaction is human-driven, with higher scores indicating a greater likelihood of human activity. (default 0.5)
+    score: 0.5
+    VerifyUrl: "https://www.google.com/recaptcha/api/siteverify"
+security:
+    tokens:
+        accessToken:
+            secure: false
+            httpOnly: false
+            priority: "high"
+            sameSite: "lax"
+            path: "/"
+            expiresWithin: "1h"
+            issuer: "authguard"
+        sessionToken:
+            expiresWithin: "90d"
+            secure: false
+            httpOnly: true
+            priority: "high"
+            sameSite: "lax"
+            path: "/"
+            issuer: "authguard"
+    password:
+        bcryptSaltRounds: 14
+    mfaChallenge:
+        codeLength: 6
+        bcryptSaltRounds: 10
+    reCaptcha:
+        siteKey: "6LeOQHoqAAAAALD2hcJ36tq9AltjHlbe5cgE-09x"
+        verifyUrl: "https://www.google.com/recaptcha/api/siteverify"
+        scoreThreshold: 0.5
+sso:
+    defaultFrontendRedirectUrl: "https://dev-server.com"
+    google:
+        clientId: 65768787162-avfisomfba0jslck8t76lqbufuthemfv.apps.googleusercontent.com
+        scopes: ["email", "profile", "openid"]
+        redirectUri: "https://dev-server.com/api/accounts/auth/signin/sso/google/callback"
+    microsoft:
+        clientId: 1d2c12cf-77e2-4284-a1d5-e47e4d13f350
+        scopes: ["openid"]
+        redirectUri: "https://dev-server.com/api/accounts/auth/signin/sso/microsoft/callback"
+general:
+    serverName: "AuthGuard"

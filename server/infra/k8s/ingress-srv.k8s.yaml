@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: ingress-srv
+    annotations:
+        nginx.ingress.kubernetes.io/use-regex: "true"
+
+spec:
+    ingressClassName: nginx
+    tls:
+        - hosts:
+              - dev-server.com
+          secretName: dev-server-tls
+    rules:
+        - host: dev-server.com
+          http:
+              paths:
+                  - path: /api/accounts/?(.*)
+                    pathType: ImplementationSpecific
+                    backend:
+                        service:
+                            name: accounts-srv
+                            port:
+                                number: 3000

@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: accounts-depl
+spec:
+    selector:
+        matchLabels:
+            app: accounts
+    replicas: 1
+    template:
+        metadata:
+            labels:
+                app: accounts
+        spec:
+            containers:
+                - name: accounts
+                  image: hassanattar/accounts-service
+                  envFrom:
+                      - secretRef:
+                            name: dev-env-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: accounts-srv
+spec:
+    selector:
+        app: accounts
+    type: ClusterIP
+    ports:
+        - name: accounts
+          protocol: TCP
+          port: 3000
+          targetPort: 3000
