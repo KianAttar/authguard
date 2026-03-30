@@ -2,7 +2,6 @@ import { Request, Response, NextFunction, RequestHandler } from "express";
 import { Session, SessionInfo } from "../../models/session/session.js";
 import { ClientError, UnauthorizedError } from "@mssd/errors";
 import { AuthToken } from "../../models/session/auth-token.js";
-// Middleware function
 
 interface VerifySessionTokenOptions {
     denyAccess?: boolean;
@@ -12,12 +11,9 @@ const defaultOptions: VerifySessionTokenOptions = {
 };
 const verifySessionToken = function (opt?: VerifySessionTokenOptions): RequestHandler {
     return async (req, res, next) => {
-        console.log("cookies", req.cookies);
-        console.log("Inside verifySessionToken");
         opt = { ...defaultOptions, ...opt };
-        if (req.isSessionAuthenticated()) return next(); // already been called
+        if (req.isSessionAuthenticated()) return next();
         const token = req.cookies[Session.SESSION_TOKEN_COOKIE_NAME];
-        console.log("token", token);
         if (!token) {
             if (opt.denyAccess) throw new UnauthorizedError();
             next();
@@ -27,28 +23,21 @@ const verifySessionToken = function (opt?: VerifySessionTokenOptions): RequestHa
         let st: string;
         try {
             st = (await authToken.verifySessionToken(token)).st;
-            console.log("st", st);
         } catch (err) {
-            console.log(err);
             if (!(err instanceof ClientError)) throw err;
             if (opt.denyAccess) throw err;
             next();
             return;
         }
         const session = await Session.findBySessionToken(st);
-        console.log("session", session);
         if (!session) {
-            console.log("session not exists");
-            console.log(opt);
             if (opt.denyAccess) {
-                console.log("Denying access...");
                 throw new UnauthorizedError();
             }
             next();
             return;
         }
         req.session = session;
-        console.log("session was set on req");
         next();
     };
 };

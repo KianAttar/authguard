@@ -18,8 +18,6 @@ interface SsoSigninOptions {
 
 const ssoRedirectEndpoint = function (options: SsoSigninOptions): RequestHandler {
     return async function (req, res, next) {
-        console.log("Inside ssoRedirectEndpoint");
-        console.log("session", req.session);
         const { query } = await dataValidator({ query: querySchema }, req);
         const redirectTo = await SsoState.createAuthorizationUrlWithPkce({
             frontendRedirectUrl: query.redirectUrl,
@@ -37,8 +35,6 @@ const callbackSchema = z.object({
 
 const ssoCallbackEndpoint = function (options: SsoSigninOptions): RequestHandler {
     return async function (req, res, next) {
-        console.log("Inside ssoCallbackEndpoint for ", options.provider.valueOf());
-        console.log("session", req.session);
         try {
             const { query } = await dataValidator({ query: callbackSchema }, req);
             const ssoState = await SsoState.findByState(query.state);

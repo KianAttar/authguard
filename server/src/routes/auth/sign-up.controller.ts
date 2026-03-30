@@ -20,7 +20,7 @@ const schema = z.object({
         .optional(),
     lastName: z
         .string()
-        .regex(/^[a-zA-Z]$/, "firstName must contain only english letters.")
+        .regex(/^[a-zA-Z]+$/, "lastName must contain only english letters.")
         .optional(),
     company: z.string().optional(),
     dob: z.date({ coerce: true }).max(new Date()).optional()

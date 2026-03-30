@@ -5,26 +5,28 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FcGoogle } from "react-icons/fc";
 import { type loginFields } from "../types/FormFields";
+import { signIn, getApiErrorMessage } from "../api/client";
 
 const { Paragraph } = Typography;
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z
+    .string()
+    .min(12, "Password must be at least 12 characters")
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/,
+      "Must include uppercase, lowercase, number, and special character (@$!%*?&)"
+    ),
 });
 
 const Login = () => {
   const navigate = useNavigate();
   const [messageApi, contextHolder] = message.useMessage();
 
-  const errorMessage = (msg: string) => {
-    messageApi.error(msg);
-  };
-
   const {
     control,
     handleSubmit,
-    setError,
     formState: { errors, isSubmitting },
   } = useForm<loginFields>({
     resolver: zodResolver(loginSchema),
@@ -32,18 +34,20 @@ const Login = () => {
 
   const onSubmit: SubmitHandler<loginFields> = async (data) => {
     try {
-      //request
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log(data);
-      setError("root", {
-        type: "manual",
-        message: "This email is already taken",
-      });
-      errorMessage("This email is already taken");
-      navigate("/mfa");
+      const res = await signIn(data.email, data.password);
+      if (res.status === 202) {
+        const mfaData = res.data as { challenge: { id: string } };
+        navigate("/mfa", { state: { challengeId: mfaData.challenge.id } });
+      } else {
+        messageApi.success("Signed in successfully");
+      }
     } catch (error) {
-      message.error("An unexpected error occurred");
+      messageApi.error(getApiErrorMessage(error));
     }
+  };
+
+  const handleGoogleSignIn = () => {
+    window.location.href = "/api/accounts/auth/signin/sso/google";
   };
 
   return (
@@ -56,7 +60,7 @@ const Login = () => {
         wrapperCol={{ span: 24 }}
       >
         <Form.Item>
-          <Button icon={<FcGoogle />} block>
+          <Button icon={<FcGoogle />} block onClick={handleGoogleSignIn}>
             Continue with Google
           </Button>
         </Form.Item>

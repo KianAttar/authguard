@@ -78,10 +78,8 @@ class Session extends AbstractModel<ISessionDoc> {
     }
 
     static async createOrUpdateSession(data: CreateOrUpdateSessionData): Promise<Session> {
-        // TODO Refactor this function (updateSession Instance method)
-        let doc: ISessionDoc;
+        let doc: ISessionDoc | undefined;
         if (data.session) {
-            // If session is available
             doc = (await SessionModel.findByIdAndUpdate(
                 data.session.getId(),
                 {
@@ -92,7 +90,6 @@ class Session extends AbstractModel<ISessionDoc> {
             )) as ISessionDoc;
             return data.user ? new UserSession(doc, data.user) : new Session(doc);
         } else {
-            // no session
             const user = data.user ?? (await User.findById(data.challenge.getUserId()));
             if (!user) {
                 throw new InternalServerError(
@@ -101,7 +98,6 @@ class Session extends AbstractModel<ISessionDoc> {
                 );
             }
             if (!data.challenge) {
-                // challenge was not done (login with password)
                 doc = await SessionModel.build({
                     userId: user.getUserId(),
                     role: user.getRole(),
@@ -112,14 +108,12 @@ class Session extends AbstractModel<ISessionDoc> {
                     userAgent: data.req.get("user-agent")
                 }).save();
             } else {
-                // challenge was done (either new login, or enabling Sudo mode.)
                 if (!data.challenge.hasVerified()) {
                     throw new UnprocessableEntityError(
                         "MFA Challenge verification is required to proceed."
                     );
                 }
                 if (!data.challenge.getSessionId()) {
-                    // challenge not associated with a session (it is a login)
                     if (data.req.ip && data.req.get("user-agent")) {
                         const existingDoc = await SessionModel.findOne({
                             userId: user.getUserId(),
@@ -138,7 +132,6 @@ class Session extends AbstractModel<ISessionDoc> {
                             )) as ISessionDoc;
                         }
                     }
-                    //@ts-ignore
                     if (!doc)
                         doc = await SessionModel.build({
                             userId: user.getUserId(),
@@ -152,7 +145,6 @@ class Session extends AbstractModel<ISessionDoc> {
                             userAgent: data.req.get("user-agent")
                         }).save();
                 } else {
-                    // challenge is associated with a session (entering Sudo mode)
                     doc = (await SessionModel.findByIdAndUpdate(
                         data.challenge.getSessionId(),
                         {
@@ -166,15 +158,10 @@ class Session extends AbstractModel<ISessionDoc> {
                     )) as ISessionDoc;
                 }
             }
-            return new UserSession(doc, user);
+            return new UserSession(doc!, user);
         }
     }
-    // static async getSessionBySessionToken(token: string): Promise<Session | undefined> {
-    //     const st = (await (await AuthToken.getInstance()).verifySessionToken(token)).st;
-    //     return this.findById(st);
-    // }
     async createAccessToken(): Promise<string> {
-        console.log("Inside createAccessToken");
         return (await AuthToken.getInstance()).signAccessToken({
             userId: this.doc.userId.toString(),
             role: this.doc.role,
@@ -183,7 +170,6 @@ class Session extends AbstractModel<ISessionDoc> {
         });
     }
     async createSessionToken(): Promise<string> {
-        console.log("Inside createSessionToken");
         return (await AuthToken.getInstance()).signSessionToken({
             st: this.doc.sessionToken as string
         });
@@ -194,7 +180,7 @@ class Session extends AbstractModel<ISessionDoc> {
             return user;
         } else {
             throw new InternalServerError(
-                "User assoicated with a session does not exist.",
+                "User associated with a session does not exist.",
                 new Error()
             );
         }
@@ -246,7 +232,6 @@ class UserSession extends Session {
     }
 
     async createAccessToken(): Promise<string> {
-        console.log("Inside createAccessToken");
         return (await AuthToken.getInstance()).signAccessToken({
             userId: this.doc.userId.toString(),
             role: this.doc.role,

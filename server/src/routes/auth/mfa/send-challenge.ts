@@ -12,7 +12,7 @@ const schema = z.object({
         .min(1)
         .refine((val) => mongoose.Types.ObjectId.isValid(val), "Invalid challenge identifier."),
     challengeMethod: z
-        .enum(Object.values(ChallengeMethod) as [ChallengeMethod, ...ChallengeMethod[]]) //TODO
+        .enum(Object.values(ChallengeMethod) as [ChallengeMethod, ...ChallengeMethod[]])
         .optional()
 });
 

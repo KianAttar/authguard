@@ -27,14 +27,7 @@ async function sendEmail({ code, to }: Options) {
             secretAccessKey: ENV.AWS_SES_SECRET_ACCESS_KEY
         }
     });
-    try {
-        const res = await client.send(cmd);
-        console.log(res);
-    } catch (err) {
-        console.log("ERROR in send Email");
-        console.log(err);
-        throw err;
-    }
+    await client.send(cmd);
 }
 
 export { sendEmail };

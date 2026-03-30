@@ -58,7 +58,6 @@ class SsoState extends AbstractModel<ISsoStateDoc> {
     private claims?: typeof jwtClaimSchema._type = undefined;
     private static GOOGLE_OAUTH_CONFIG: client.Configuration | undefined = undefined;
     private static MICROSOFT_OAUTH_CONFIG: client.Configuration | undefined = undefined;
-    private static APPLE_OAUTH_CONFIG: client.Configuration | undefined = undefined;
     private static PKCE_CODE_CHALLENGE_METHOD = "S256";
     private static GOOGLE_STATIC_PARAMS: Pick<OAuthPathParams, "redirect_uri" | "scope"> = {
         scope: CONFIG.sso.google.scopes.join(" "),
@@ -67,10 +66,6 @@ class SsoState extends AbstractModel<ISsoStateDoc> {
     private static MICROSOFT_STATIC_PARAMS: Pick<OAuthPathParams, "redirect_uri" | "scope"> = {
         scope: CONFIG.sso.microsoft.scopes.join(" "),
         redirect_uri: CONFIG.sso.microsoft.redirectUri
-    };
-    private static APPLE_STATIC_PARAMS: Pick<OAuthPathParams, "redirect_uri" | "scope"> = {
-        scope: "UNDEFINED",
-        redirect_uri: "UNDEFINED"
     };
     static async findById(id: mongoose.Types.ObjectId | string): Promise<SsoState | undefined> {
         const doc = await SsoStateModel.findById(id);
@@ -120,8 +115,6 @@ class SsoState extends AbstractModel<ISsoStateDoc> {
                     );
                 }
                 return SsoState.MICROSOFT_OAUTH_CONFIG;
-            case AuthProvider.APPLE:
-                throw new InternalServerError("NOT IMPLEMENTED", new Error());
             default:
                 throw new InternalServerError("Oauth provider is not supported", new Error());
         }
@@ -132,8 +125,6 @@ class SsoState extends AbstractModel<ISsoStateDoc> {
                 return SsoState.GOOGLE_STATIC_PARAMS;
             case AuthProvider.MICROSOFT:
                 return SsoState.MICROSOFT_STATIC_PARAMS;
-            case AuthProvider.APPLE:
-                return SsoState.APPLE_STATIC_PARAMS;
             default:
                 throw new InternalServerError("Oauth provider is not supported", new Error());
         }
@@ -157,7 +148,6 @@ class SsoState extends AbstractModel<ISsoStateDoc> {
         });
         authParams.state = ssoState.getState();
         authParams.nonce = ssoState.getNonce();
-        console.log("RedirectURL created: ", client.buildAuthorizationUrl(config, authParams));
         return client.buildAuthorizationUrl(config, authParams).toString();
     }
     async getOAuthClaimsFromCallbackUrl(data: ProcessPkceCallbackData) {

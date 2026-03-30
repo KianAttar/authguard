@@ -4,25 +4,11 @@ import { IUserDoc, UserModel } from "./model/user-model.js";
 import { Challenge } from "../challenge/challenge.js";
 import { Session } from "../session/session.js";
 import { LinkedAccountModel } from "./model/linked-accounts.js";
-import { AuthProvider, ChallengeMethod } from "../constants.js";
-import {
-    InternalServerError,
-    RequestDataValidationError,
-    UnprocessableEntityError
-} from "@mssd/errors";
+import { AuthProvider } from "../constants.js";
+import { RequestDataValidationError, UnprocessableEntityError } from "@mssd/errors";
 import { Request } from "express";
 import { sendEmail } from "../../email/email-service.js";
-import { authenticator } from "otplib";
-import { CONFIG, ENV } from "../../config/config.js";
-import crypto from "node:crypto";
-
-authenticator.options = {
-    step: 30,
-    window: 1,
-    digits: 6,
-    // @ts-ignore
-    encoding: "base64"
-};
+import { CONFIG } from "../../config/config.js";
 
 interface BaseSignUpDate {
     email: string;
@@ -215,24 +201,13 @@ class User extends AbstractModel<IUserDoc> {
     async sendChallenge(challenge: Challenge) {
         const updatedChallenge = await challenge.send();
         if (updatedChallenge.rawChallengeCode) {
-            switch (challenge.getMethod()) {
-                case ChallengeMethod.EMAIL:
-                    await this.sendEmail(updatedChallenge.rawChallengeCode);
-                    break;
-                case ChallengeMethod.SMS:
-                    await this.sendSms(updatedChallenge.rawChallengeCode);
-                    break;
-                default:
-                    // Nothing need to be done for TOTP
-                    break;
-            }
+            await this.sendEmail(updatedChallenge.rawChallengeCode);
         }
         return challenge;
     }
     private async sendEmail(code: string): Promise<void> {
         sendEmail({ code, to: this.doc.email });
     }
-    private async sendSms(code: string) {}
     private static async create(data: BaseSignUpDate): Promise<User> {
         try {
             const newUser = await UserModel.build({
@@ -355,54 +330,6 @@ class User extends AbstractModel<IUserDoc> {
             mfaOnLogin: this.doc.security.mfaOnLogin
         };
     }
-    private async encryptTotpSecret(secret: string): Promise<string> {
-        const iv = crypto.randomBytes(16);
-        const cipher = crypto.createCipheriv("aes-256-cbc", ENV.TOTP_ENCRYPTION_KEY, iv);
-        let encrypted = cipher.update(secret, "utf8", "hex");
-        encrypted += cipher.final("hex");
-        return `${iv.toString("hex")}:${encrypted}`;
-    }
-
-    private async decryptTotpSecret(encryptedSecret: string): Promise<string> {
-        const [ivHex, encrypted] = encryptedSecret.split(":");
-        if (!ivHex || !encrypted) {
-            throw new InternalServerError(
-                "Invalid encrypted secret format.",
-                new Error("Invalid encrypted secret format.")
-            );
-        }
-        const iv = Buffer.from(ivHex, "hex");
-        const decipher = crypto.createDecipheriv("aes-256-cbc", ENV.TOTP_ENCRYPTION_KEY, iv);
-        let decrypted = decipher.update(encrypted, "hex", "utf8");
-        decrypted += decipher.final("utf8");
-        return decrypted;
-    }
-    async setupNewTotp(data: TotpRecordCreationData): Promise<TotpRecordSetup> {
-        const secret = authenticator.generateSecret();
-        const totpDoc = this.doc.addTotpRecord({
-            label: data.label,
-            secret: await this.encryptTotpSecret(secret)
-        });
-        const otpUri = authenticator.keyuri(this.doc.email, CONFIG.general.serverName, secret);
-        return {
-            otpUri,
-            label: data.label,
-            createdAt: totpDoc.createdAt.toISOString(),
-            id: totpDoc.id.toString()
-        };
-    }
-    async verifyTotp() {}
-}
-
-interface TotpRecordCreationData {
-    label: string;
-}
-interface TotpRecord extends TotpRecordCreationData {
-    id: string;
-    createdAt: string;
-}
-interface TotpRecordSetup extends TotpRecord {
-    otpUri: string;
 }
 
 export { User };

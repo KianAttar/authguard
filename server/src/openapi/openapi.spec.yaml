@@ -69,13 +69,13 @@ paths:
                                         $ref: "#/components/schemas/User"
                                     accessToken:
                                         type: string
-                                    refershToken:
+                                    refreshToken:
                                         type: string
                     headers:
-                        ATK:
-                            $ref: "#/components/headers/ATK"
-                        RTK:
-                            $ref: "#/components/headers/RTK"
+                        AT:
+                            $ref: "#/components/headers/AT"
+                        ST:
+                            $ref: "#/components/headers/ST"
 
                 "202":
                     $ref: "#/components/responses/MfaRequired"
@@ -97,11 +97,26 @@ paths:
             operationId: signinWithSsoProvider
             description: |
                 Signin/Signup with SSO providers
-
-                For Sign up new user can complete its infomarion through `PATCH /users/me`
             responses:
                 "303":
                     description: "Redirected to the provider domain to complete authentication"
+                "400":
+                    $ref: "#/components/responses/ValidationError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
+    /auth/signin/sso/{provider}/callback:
+        get:
+            summary: SSO callback endpoint
+            tags:
+                - Auth
+            parameters:
+                - $ref: "#/components/parameters/ssoProviderName"
+            operationId: ssoProviderCallback
+            description: |
+                Callback endpoint for SSO providers (google and microsoft) after authentication
+            responses:
+                "303":
+                    description: "Redirected back to the client application after SSO authentication"
                 "400":
                     $ref: "#/components/responses/ValidationError"
                 "500":
@@ -159,117 +174,12 @@ paths:
                                         $ref: "#/components/schemas/User"
                                     accessToken:
                                         type: string
-                                    refershToken:
+                                    refreshToken:
                                         type: string
                 "202":
                     $ref: "#/components/responses/MfaRequired"
                 "400":
                     $ref: "#/components/responses/ValidationError"
-                "500":
-                    $ref: "#/components/responses/InternalServerError"
-    /auth/token:
-        post:
-            summary: get token and access token by exchanging authorization code and code verifier
-            operationId: getAccessTokenAndRefreshToken
-            tags:
-                - Auth
-            description: Obtain the access token [and referesh token] using auth code.
-            requestBody:
-                $ref: "#/components/requestBodies/TokenRequest"
-            responses:
-                "200":
-                    description: Access token successfully refreshed
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                properties:
-                                    accessToken:
-                                        type: string
-                                        description: The new access token.
-                                        example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                                    refereshToken:
-                                        type: string
-                                        description: the new referesh token
-                                required:
-                                    - accessToken
-                                    - refershToken
-                "400":
-                    $ref: "#/components/responses/ValidationError"
-                "401":
-                    $ref: "#/components/responses/UnauthorizedError"
-                "500":
-                    $ref: "#/components/responses/InternalServerError"
-    /auth/token/refresh:
-        post:
-            security:
-                - BearerAuth: []
-            summary: referesh the access token by providing the expired access token and refresh token
-            operationId: refreshAccessToken
-            tags:
-                - Auth
-            description: Obtain a new access token using a refresh token.
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            type: object
-                            properties:
-                                accessToken:
-                                    type: string
-                                    description: the access token (valid or expired) - The token stored in the RTK will be evaluated before looking at the body
-                                refreshToken:
-                                    type: string
-                                    description: The refresh token used to obtain a new access token. - The token stored in the RTK will be evaluated before looking at the body
-                                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-            responses:
-                "200":
-                    description: Access token successfully refreshed
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                properties:
-                                    accessToken:
-                                        type: string
-                                        description: The new access token.
-                                        example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                                required:
-                                    - accessToken
-                "400":
-                    $ref: "#/components/responses/ValidationError"
-                "401":
-                    $ref: "#/components/responses/UnauthorizedError"
-                "500":
-                    $ref: "#/components/responses/InternalServerError"
-    /auth/token/verify:
-        get:
-            security:
-                - BearerAuth: []
-            summary: verify session associated with the token
-            operationId: verifyTokenSession
-            description: verify the token (will be verified based on sid) and get back the data related to the session associated with that token
-            tags:
-                - Auth
-            responses:
-                "200":
-                    description: Access token is valid, some info related to current session has been returned
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                properties:
-                                    uid:
-                                        type: string
-                                    role:
-                                        type: string
-                                    sid:
-                                        type: string
-                                    lastMfaVerifiedAt:
-                                        type: string
-                                        format: date-time
-                "401":
-                    $ref: "#/components/responses/UnauthorizedError"
                 "500":
                     $ref: "#/components/responses/InternalServerError"
     # MFA
@@ -348,28 +258,6 @@ paths:
                     $ref: "#/components/responses/NotFoundError"
                 "500":
                     $ref: "#/components/responses/InternalServerError"
-    /auth/mfa/challenge/cancel:
-        post:
-            summary: cancel the MFA challenge
-            operationId: cancelMfaChallenge
-            description: Cancel the MFA Challenge (Idempotent)
-            tags:
-                - Auth MFA
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            type: object
-                            properties:
-                                challengeId:
-                                    type: string
-                            required:
-                                - challengeId
-            responses:
-                "204":
-                    description: Challenge was cancelled
-                "500":
-                    $ref: "#/components/responses/InternalServerError"
     /auth/mfa/challenge/verify:
         post:
             summary: verify the MFA challenge
@@ -428,319 +316,6 @@ paths:
 
                 "401":
                     $ref: "#/components/responses/UnauthorizedError"
-                "500":
-                    $ref: "#/components/responses/InternalServerError"
-        patch:
-            summary: update current user info
-            security:
-                - BearerAuth: []
-            tags:
-                - User
-            description: update the current user info
-            operationId: updateCurrentUser
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/UpdatableUser"
-            responses:
-                "200":
-                    description: User data
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                properties:
-                                    user:
-                                        $ref: "#/components/schemas/User"
-                "401":
-                    $ref: "#/components/responses/UnauthorizedError"
-                "500":
-                    $ref: "#/components/responses/InternalServerError"
-        delete:
-            summary: request deletion for the current account
-            security:
-                - BearerAuth: []
-            tags:
-                - User
-            description: |
-                Request to delete the account for the current user. 
-                The account will be flagged to be permenantly removed within 90 days from the request date. If user logs back in, the account information will be restored.
-            operationId: deleteUserAccount
-            responses:
-                "200":
-                    description: Account has been flagged for deletion
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                properties:
-                                    message:
-                                        type: string
-                "202":
-                    $ref: "#/components/responses/MfaRequired"
-                "401":
-                    $ref: "#/components/responses/UnauthorizedError"
-                "500":
-                    $ref: "#/components/responses/InternalServerError"
-    /users/me/profile-image:
-        put:
-            summary: upload profile image
-            security:
-                - BearerAuth: []
-            operationId: uploadProfileImage
-            tags:
-                - User Profile Image
-            requestBody:
-                content:
-                    multipart/form-data:
-                        schema:
-                            type: object
-                            properties:
-                                file:
-                                    type: string
-                                    format: binary
-                                    description: The image file to upload (must be jpg or png)
-                        encoding:
-                            file:
-                                contentType: image/png, image/jpeg
-            responses:
-                "200":
-                    description: Profile image was updated successfully
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                properties:
-                                    profileImage:
-                                        type: string
-                                required:
-                                    - profileImage
-                "400":
-                    $ref: "#/components/responses/ValidationError"
-                "401":
-                    $ref: "#/components/responses/UnauthorizedError"
-                "500":
-                    $ref: "#/components/responses/InternalServerError"
-        delete:
-            summary: remove profile image
-            security:
-                - BearerAuth: []
-            operationId: removeProfileImage
-            description: removes a profile image
-            tags:
-                - User Profile Image
-            responses:
-                "204":
-                    description: the profile image was removed (idempotent)
-                "401":
-                    $ref: "#/components/responses/UnauthorizedError"
-                "500":
-                    $ref: "#/components/responses/InternalServerError"
-    # Users MFA
-    /users/me/mfa/methods:
-        get:
-            operationId: getAllMfaMethods
-            summary: get all available MFA methods for current user
-            security:
-                - BearerAuth: []
-            tags:
-                - User MFA
-            description: get all available MFA methods available for the current user
-            responses:
-                "200":
-                    description: list of MFAs set up for the current user
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                properties:
-                                    mfaMethods:
-                                        type: array
-                                        items:
-                                            $ref: "#/components/schemas/MfaMethod"
-                "401":
-                    $ref: "#/components/responses/UnauthorizedError"
-                "500":
-                    $ref: "#/components/responses/InternalServerError"
-    /users/me/mfa/methods/totp:
-        post:
-            operationId: setupTotpMfaMethod
-            summary: setup MFA using TOTP (Time-based One-Time Password)
-            security:
-                - BearerAuth: []
-            tags:
-                - User MFA
-            description: setup a new MFA method
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            type: object
-                            properties:
-                                identifier:
-                                    type: string
-                            required:
-                                - indentifier
-            responses:
-                "202":
-                    description: |
-                        accepted, the challenge needs to be created and verified for that MFA method to be accepted
-                    content:
-                        application/json:
-                            schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/TotpRecord"
-                                    - type: object
-                                      properties:
-                                          qrCodeImage:
-                                              type: string
-                "401":
-                    $ref: "#/components/responses/UnauthorizedError"
-                "500":
-                    $ref: "#/components/responses/InternalServerError"
-        delete:
-            operationId: removeTotpMfaMethod
-            summary: remove TOTP MFA method
-            security:
-                - BearerAuth: []
-            tags:
-                - User MFA
-            parameters:
-                - name: totpId
-                  in: query
-                  allowEmptyValue: false
-                  required: true
-                  schema:
-                      type: string
-            description: remove totp record
-            responses:
-                "202":
-                    $ref: "#/components/responses/MfaRequired"
-                "204":
-                    description: |
-                        Method deleted
-                "400":
-                    $ref: "#/components/responses/ValidationError"
-                "401":
-                    $ref: "#/components/responses/UnauthorizedError"
-                "500":
-                    $ref: "#/components/responses/InternalServerError"
-    /users/me/mfa/methods/sms:
-        post:
-            operationId: setupSmsMfaMethod
-            summary: setup phone number for MFA
-            security:
-                - BearerAuth: []
-            tags:
-                - User MFA
-            description: setup a new MFA method
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            type: object
-                            properties:
-                                identifier:
-                                    type: string
-                            required:
-                                - indentifier
-            responses:
-                "202":
-                    description: |
-                        accepted, the challenge needs to be created and verified for that MFA method to be accepted
-                    content:
-                        application/json:
-                            schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/TotpRecord"
-                                    - type: object
-                                      properties:
-                                          qrCodeImage:
-                                              type: string
-                "401":
-                    $ref: "#/components/responses/UnauthorizedError"
-                "500":
-                    $ref: "#/components/responses/InternalServerError"
-        delete:
-            operationId: removeSmsMfaMethod
-            summary: remove phone record
-            security:
-                - BearerAuth: []
-            tags:
-                - User MFA
-            parameters:
-                - name: totpId
-                  in: query
-                  allowEmptyValue: false
-                  required: true
-                  schema:
-                      type: string
-            description: remove totp record
-            responses:
-                "202":
-                    $ref: "#/components/responses/MfaRequired"
-                "204":
-                    description: |
-                        Method deleted
-                "400":
-                    $ref: "#/components/responses/ValidationError"
-                "401":
-                    $ref: "#/components/responses/UnauthorizedError"
-                "500":
-                    $ref: "#/components/responses/InternalServerError"
-    /users/me/mfa/methods/{mfaMethod}/challenge:
-        post:
-            operationId: createChallengeToVerifyMfaMethod
-            summary: create an MFA challenge to verify MFA method
-            security:
-                - BearerAuth: []
-            tags:
-                - User MFA
-            parameters:
-                - $ref: "#/components/parameters/MfaMethod"
-                - in: query
-                  name: totpId
-                  schema:
-                      type: string
-                  required: false
-                  allowEmptyValue: false
-            description: create an MFA challenge for the specified method
-            responses:
-                "201":
-                    description: challenge created
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/MfaChallenge"
-                "401":
-                    $ref: "#/components/responses/UnauthorizedError"
-                "404":
-                    $ref: "#/components/responses/NotFoundError"
-                "500":
-                    $ref: "#/components/responses/InternalServerError"
-    /users/me/mfa/methods/{mfaMethod}/verify:
-        post:
-            operationId: verifyMfaMethodChallenge
-            summary: verify MFA challenge
-            security:
-                - BearerAuth: []
-            tags:
-                - User MFA
-            parameters:
-                - $ref: "#/components/parameters/MfaMethod"
-            description: create an MFA challenge for the specified method
-            responses:
-                "200":
-                    description: MfaMethod has been verified.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/MfaMethod"
-                "401":
-                    $ref: "#/components/responses/UnauthorizedError"
-                "404":
-                    $ref: "#/components/responses/NotFoundError"
                 "500":
                     $ref: "#/components/responses/InternalServerError"
     # Linked Accounts
@@ -882,7 +457,6 @@ components:
                 type: string
                 enum:
                     - google
-                    - apple
                     - microsoft
         ssoClientState:
             in: query
@@ -902,23 +476,11 @@ components:
                 - status: `success | fail` (signin was successful or not)
                 - isNewUser: `true | false` (whether this is a new user and needs to complete the their information)
                 - clientState: the state that was passed to the query parameter in the time of initiation
-                - provider: `google | microsoft | apple`
-                - code: `authorization_code` to use to obtain access token and refersh token
+                - provider: `google | microsoft`
+                - code: `authorization_code` to use to obtain access token and refresh token
             schema:
                 type: string
                 example: https://domain.com/path/goes/here
-        MfaMethod:
-            in: path
-            required: true
-            name: mfaMethod
-            description: the MFA method
-            allowEmptyValue: false
-            schema:
-                type: string
-                enum:
-                    - totp
-                    - email
-                    - sms
         OAuthCodeChallenge:
             in: query
             description: |
@@ -938,73 +500,8 @@ components:
                 enum: [S256]
             required: true
             allowEmptyValue: false
-        OAuthResponseType:
-            in: query
-            name: response_type
-            required: true
-            allowEmptyValue: false
-            schema:
-                type: string
-                enum: [code]
-        OAuthRedirectUri:
-            in: query
-            name: redirect_uri
-            required: true
-            allowEmptyValue: false
-            schema:
-                type: string
-        OAuthClientId:
-            in: query
-            name: client_id
-            required: true
-            allowEmptyValue: false
-            schema:
-                type: string
-    requestBodies:
-        TokenRequest:
-            content:
-                application/json:
-                    schema:
-                        type: object
-                        properties:
-                            authorization_code:
-                                type: string
-                                description: auhtorization code recieved from server
-                            code_verifier:
-                                type: string
-                                description: plain code (not hashed)
 
     schemas:
-        UpdatableUser:
-            type: object
-            properties:
-                firstName:
-                    type: string
-                    description: The first name of the user.
-                    example: "John"
-                lastName:
-                    type: string
-                    description: The last name of the user.
-                    example: "Doe"
-                company:
-                    type: string
-                    description: The company name of the user.
-                    example: "string"
-                dob:
-                    type: string
-                    format: date
-                    description: The date of birth of the user.
-                    example: "1990-05-20"
-                email:
-                    type: string
-                    description: The email address of the user.
-                    example: "user@example.com"
-                phone:
-                    $ref: "#/components/schemas/PhoneRecord"
-                mfaOnLogin:
-                    type: boolean
-                    description: Whether MFA is required on login.
-                    example: true
         User:
             type: object
             properties:
@@ -1133,18 +630,6 @@ components:
                 - lastMfaVerifiedAt
                 - createdAt
                 - expiresAt
-                # - mfaUsed
-        PhoneRecord:
-            type: object
-            properties:
-                regionCode:
-                    type: string
-                    description: The region code for the phone number.
-                    example: "+1"
-                number:
-                    type: string
-                    description: The user's phone number.
-                    example: "1234567890"
         ServiceError:
             type: object
             properties:
@@ -1240,26 +725,6 @@ components:
                           - 1 special character from the following: @, $, !, %, *, ?, &
             required:
                 - email
-        TotpRecord:
-            type: object
-            properties:
-                id:
-                    type: string
-                identifier:
-                    type: string
-                lastUsedAt:
-                    type: string
-                    format: date-time
-                createdAt:
-                    type: string
-                    format: date-time
-                isVerified:
-                    type: boolean
-            required:
-                - id
-                - label
-                - lastUsedAt
-                - isVerified
     headers:
         AT:
             description: Cookie containing the JWT (JSON Web Token) Access Token.

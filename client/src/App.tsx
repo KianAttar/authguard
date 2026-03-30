@@ -9,11 +9,10 @@ const router = createBrowserRouter([
   {
     path: "/",
     element: <RootLayout />,
-    // errorElement: ,
     children: [
       { index: true, path: "/", element: <LoginPage /> },
       { path: "/signup", element: <SignUpPage /> },
-      { path: "/mfa", element: <MFAPage></MFAPage> },
+      { path: "/mfa", element: <MFAPage /> },
     ],
   },
 ]);

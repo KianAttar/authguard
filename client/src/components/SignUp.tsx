@@ -5,28 +5,36 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FcGoogle } from "react-icons/fc";
 import { type signUpFields } from "../types/FormFields";
+import { signUp, getApiErrorMessage } from "../api/client";
 
 const { Paragraph } = Typography;
 
 const signupSchema = z.object({
-  firstname: z.string(),
-  lastname: z.string(),
+  firstname: z
+    .string()
+    .min(1, "First name is required")
+    .regex(/^[a-zA-Z]+$/, "First name must contain only letters"),
+  lastname: z
+    .string()
+    .min(1, "Last name is required")
+    .regex(/^[a-zA-Z]+$/, "Last name must contain only letters"),
   email: z.string().email("Please enter a valid email"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z
+    .string()
+    .min(12, "Password must be at least 12 characters")
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/,
+      "Must include uppercase, lowercase, number, and special character (@$!%*?&)"
+    ),
 });
 
 const SignUp = () => {
   const navigate = useNavigate();
   const [messageApi, contextHolder] = message.useMessage();
 
-  const errorMessage = (msg: string) => {
-    messageApi.error(msg);
-  };
-
   const {
     control,
     handleSubmit,
-    setError,
     formState: { errors, isSubmitting },
   } = useForm<signUpFields>({
     resolver: zodResolver(signupSchema),
@@ -34,18 +42,25 @@ const SignUp = () => {
 
   const onSubmit: SubmitHandler<signUpFields> = async (data) => {
     try {
-      //request
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log(data);
-      setError("root", {
-        type: "manual",
-        message: "This email is already taken",
+      const res = await signUp({
+        firstName: data.firstname,
+        lastName: data.lastname,
+        email: data.email,
+        password: data.password,
       });
-      errorMessage("This email is already taken");
-      navigate("/mfa");
+      if (res.status === 202) {
+        const mfaData = res.data as { challenge: { id: string } };
+        navigate("/mfa", { state: { challengeId: mfaData.challenge.id } });
+      } else {
+        messageApi.success("Account created successfully");
+      }
     } catch (error) {
-      message.error("An unexpected error occurred");
+      messageApi.error(getApiErrorMessage(error));
     }
+  };
+
+  const handleGoogleSignIn = () => {
+    window.location.href = "/api/accounts/auth/signin/sso/google";
   };
 
   return (
@@ -58,15 +73,15 @@ const SignUp = () => {
         wrapperCol={{ span: 24 }}
       >
         <Form.Item>
-          <Button icon={<FcGoogle />} block>
+          <Button icon={<FcGoogle />} block onClick={handleGoogleSignIn}>
             Continue with Google
           </Button>
         </Form.Item>
         <Divider plain>Or</Divider>
         <Form.Item
-          label="Firstname"
+          label="First name"
           help={errors.firstname?.message}
-          validateStatus={errors.email ? "error" : ""}
+          validateStatus={errors.firstname ? "error" : ""}
         >
           <Controller
             name="firstname"
@@ -75,9 +90,9 @@ const SignUp = () => {
           />
         </Form.Item>
         <Form.Item
-          label="Lastname"
+          label="Last name"
           help={errors.lastname?.message}
-          validateStatus={errors.email ? "error" : ""}
+          validateStatus={errors.lastname ? "error" : ""}
         >
           <Controller
             name="lastname"

@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
 import { SubmitHandler, useForm, Controller } from "react-hook-form";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button, Form, Input, message, Typography } from "antd";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  verifyMfaChallenge,
+  sendMfaChallenge,
+  getApiErrorMessage,
+} from "../api/client";
 
 const { Paragraph } = Typography;
 
@@ -15,18 +21,16 @@ type MFAField = {
 };
 
 const MFA = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const challengeId = location.state?.challengeId as string;
   const [messageApi, contextHolder] = message.useMessage();
   const [timer, setTimer] = useState(60);
   const [isResendAvailable, setIsResendAvailable] = useState(false);
 
-  const errorMessage = (msg: string) => {
-    messageApi.error(msg);
-  };
-
   const {
     control,
     handleSubmit,
-    setError,
     formState: { errors, isSubmitting },
   } = useForm<MFAField>({
     resolver: zodResolver(mfaSchema),
@@ -34,24 +38,29 @@ const MFA = () => {
 
   const onSubmit: SubmitHandler<MFAField> = async (data) => {
     try {
-      //request
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setError("root", {
-        type: "manual",
-        message: "Verification failed. Please try again.",
-      });
-      errorMessage("Verification failed. Please try again.");
-      console.log(data);
+      await verifyMfaChallenge(challengeId, data.code);
+      messageApi.success("Verified successfully");
     } catch (error) {
-      message.error("An unexpected error occurred");
+      messageApi.error(getApiErrorMessage(error));
     }
   };
 
-  const handleResend = () => {
-    setTimer(60);
-    setIsResendAvailable(false);
-    // request
+  const handleResend = async () => {
+    try {
+      await sendMfaChallenge(challengeId);
+      setTimer(60);
+      setIsResendAvailable(false);
+      messageApi.success("Code resent");
+    } catch (error) {
+      messageApi.error(getApiErrorMessage(error));
+    }
   };
+
+  useEffect(() => {
+    if (!challengeId) {
+      navigate("/", { replace: true });
+    }
+  }, [challengeId, navigate]);
 
   useEffect(() => {
     if (timer > 0) {
@@ -61,6 +70,8 @@ const MFA = () => {
       setIsResendAvailable(true);
     }
   }, [timer]);
+
+  if (!challengeId) return null;
 
   return (
     <>
@@ -96,7 +107,8 @@ const MFA = () => {
             style={{ pointerEvents: isResendAvailable ? "auto" : "none" }}
             onClick={isResendAvailable ? handleResend : undefined}
           >
-            <a>Resend</a> {isResendAvailable ? "" : ` (available in ${timer}s)`}
+            <a>Resend</a>{" "}
+            {isResendAvailable ? "" : ` (available in ${timer}s)`}
           </Paragraph>
         </Form.Item>
         <Form.Item>
