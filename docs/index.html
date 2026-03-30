@@ -4,342 +4,476 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AuthGuard - Drop-in Authentication Service</title>
+  <link rel="icon" type="image/svg+xml" href="logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #fafafa;
-      --surface: #ffffff;
-      --text: #1a1a2e;
-      --text-secondary: #555;
-      --accent: #3b82f6;
-      --accent-hover: #2563eb;
-      --border: #e5e7eb;
-      --code-bg: #f3f4f6;
-      --gradient-start: #60a5fa;
-      --gradient-end: #a78bfa;
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface-hover: #1a1a26;
+      --border: #1e1e2e;
+      --border-light: #2a2a3e;
+      --text: #e4e4ef;
+      --text-dim: #8888a0;
+      --text-muted: #55556a;
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.15);
+      --green: #22c55e;
+      --blue: #3b82f6;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --mono: 'JetBrains Mono', monospace;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'DM Sans', sans-serif;
       color: var(--text);
       background: var(--bg);
       line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
     }
-    .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+    .container { max-width: 1080px; margin: 0 auto; padding: 0 32px; }
 
-    /* Hero */
+    /* ── Nav ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(10, 10, 15, 0.8);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    nav .container {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+    nav .brand {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 600; font-size: 1.1rem; color: var(--text);
+      text-decoration: none;
+    }
+    nav .brand svg { width: 28px; height: 28px; }
+    nav .links { display: flex; gap: 28px; }
+    nav .links a {
+      color: var(--text-dim); text-decoration: none; font-size: 0.875rem;
+      font-weight: 400; transition: color 0.2s;
+    }
+    nav .links a:hover { color: var(--text); }
+
+    /* ── Hero ── */
     .hero {
-      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-      padding: 80px 24px;
+      padding: 160px 32px 100px;
       text-align: center;
-      color: white;
+      position: relative;
+      overflow: hidden;
     }
-    .hero h1 { font-size: 3rem; font-weight: 700; margin-bottom: 12px; letter-spacing: -0.5px; }
-    .hero p { font-size: 1.25rem; opacity: 0.9; max-width: 600px; margin: 0 auto; }
+    .hero::before {
+      content: '';
+      position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 600px;
+      background: radial-gradient(ellipse, var(--accent-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero .logo { width: 72px; height: 72px; margin: 0 auto 28px; position: relative; }
+    .hero h1 {
+      font-size: 3.5rem; font-weight: 700; letter-spacing: -1.5px;
+      line-height: 1.1; margin-bottom: 16px; position: relative;
+    }
+    .hero h1 span {
+      background: linear-gradient(135deg, #818cf8, #6366f1, #a78bfa);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero .subtitle {
+      font-size: 1.2rem; color: var(--text-dim); max-width: 520px;
+      margin: 0 auto 40px; line-height: 1.7; position: relative;
+    }
+    .hero .cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: white; padding: 12px 28px;
+      border-radius: 8px; text-decoration: none; font-weight: 500;
+      font-size: 0.9rem; transition: all 0.2s; position: relative;
+    }
+    .hero .cta:hover { background: #5558e6; transform: translateY(-1px); }
+    .hero .cta svg { width: 16px; height: 16px; }
 
-    /* Sections */
-    section { padding: 64px 0; }
+    /* ── Section scaffolding ── */
+    section { padding: 80px 0; }
+    .section-label {
+      font-family: var(--mono); font-size: 0.75rem; font-weight: 500;
+      color: var(--accent); text-transform: uppercase; letter-spacing: 2px;
+      margin-bottom: 12px;
+    }
     section h2 {
-      font-size: 1.75rem;
-      font-weight: 600;
-      margin-bottom: 32px;
-      text-align: center;
+      font-size: 2rem; font-weight: 600; letter-spacing: -0.5px;
+      margin-bottom: 12px;
+    }
+    section .section-desc {
+      color: var(--text-dim); font-size: 1rem; margin-bottom: 48px;
+      max-width: 560px;
+    }
+
+    /* ── Auth Flow (screenshots) ── */
+    .flow-steps { display: flex; flex-direction: column; gap: 64px; }
+    .flow-step {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 48px;
+      align-items: center;
+    }
+    .flow-step.reverse { direction: rtl; }
+    .flow-step.reverse > * { direction: ltr; }
+    .flow-step-info .step-num {
+      font-family: var(--mono); font-size: 0.75rem; color: var(--accent);
+      font-weight: 500; margin-bottom: 8px;
+    }
+    .flow-step-info h3 {
+      font-size: 1.35rem; font-weight: 600; margin-bottom: 8px;
       letter-spacing: -0.3px;
     }
-
-    /* Screenshots */
-    .screenshots {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 24px;
+    .flow-step-info p { color: var(--text-dim); font-size: 0.95rem; line-height: 1.7; }
+    .flow-step-img {
+      border-radius: 12px; overflow: hidden;
+      border: 1px solid var(--border-light);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+      transition: transform 0.3s, box-shadow 0.3s;
     }
-    .screenshot {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      overflow: hidden;
-      transition: box-shadow 0.2s;
+    .flow-step-img:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.5);
     }
-    .screenshot:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
-    .screenshot img { width: 100%; display: block; }
-    .screenshot .caption {
-      padding: 12px 16px;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--text-secondary);
-      text-align: center;
+    .flow-step-img img { width: 100%; display: block; }
+    @media (max-width: 768px) {
+      .flow-step, .flow-step.reverse { grid-template-columns: 1fr; direction: ltr; }
     }
 
-    /* Architecture */
-    .arch-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
+    /* ── Tech stack ── */
+    .stack-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
     }
-    @media (max-width: 640px) { .arch-grid { grid-template-columns: 1fr; } }
-    .arch-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
+    .stack-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 24px 20px;
+      transition: border-color 0.2s, background 0.2s;
     }
-    .arch-card h3 { font-size: 1.125rem; margin-bottom: 8px; }
-    .arch-card .tech {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 12px;
+    .stack-card:hover { border-color: var(--border-light); background: var(--surface-hover); }
+    .stack-card h3 {
+      font-size: 0.95rem; font-weight: 600; margin-bottom: 6px;
     }
-    .tag {
-      background: var(--code-bg);
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 0.8rem;
-      font-weight: 500;
-      color: var(--text-secondary);
+    .stack-card p { font-size: 0.8rem; color: var(--text-dim); line-height: 1.5; margin-bottom: 14px; }
+    .stack-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+    .stack-tag {
+      font-family: var(--mono); font-size: 0.7rem;
+      background: rgba(99, 102, 241, 0.08); color: var(--text-dim);
+      padding: 3px 8px; border-radius: 4px;
     }
+    @media (max-width: 768px) { .stack-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 480px) { .stack-grid { grid-template-columns: 1fr; } }
 
-    /* Features */
-    .features {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 20px;
-    }
-    .feature {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
-    }
-    .feature h3 { font-size: 1rem; margin-bottom: 8px; }
-    .feature p { font-size: 0.875rem; color: var(--text-secondary); }
-
-    /* API Table */
-    .api-table-wrapper { overflow-x: auto; }
+    /* ── API table ── */
+    .api-table-wrap { overflow-x: auto; }
     table {
-      width: 100%;
-      border-collapse: collapse;
-      background: var(--surface);
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid var(--border);
+      width: 100%; border-collapse: collapse;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden;
     }
-    th, td { padding: 12px 16px; text-align: left; font-size: 0.875rem; }
-    th { background: var(--code-bg); font-weight: 600; }
+    th, td { padding: 12px 16px; text-align: left; font-size: 0.85rem; }
+    th {
+      background: rgba(99, 102, 241, 0.06); font-weight: 600;
+      font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--text-dim);
+    }
     tr:not(:last-child) td { border-bottom: 1px solid var(--border); }
-    td:first-child {
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--accent);
-    }
-    td:nth-child(2) {
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 0.8rem;
-    }
+    td:first-child { font-family: var(--mono); font-weight: 600; font-size: 0.8rem; }
+    td:nth-child(2) { font-family: var(--mono); font-size: 0.8rem; color: var(--text-dim); }
+    .method-get { color: var(--green); }
+    .method-post { color: var(--blue); }
+    .method-delete { color: var(--red); }
+    .method-patch { color: var(--amber); }
 
-    /* Security */
+    /* ── Security grid ── */
     .security-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
     }
-    .sec-item {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      text-align: center;
+    .sec-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px; text-align: center;
+      transition: border-color 0.2s;
     }
-    .sec-item .label { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; }
-    .sec-item .value { font-size: 1rem; font-weight: 600; }
+    .sec-card:hover { border-color: var(--border-light); }
+    .sec-card .label {
+      font-size: 0.7rem; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    .sec-card .value {
+      font-family: var(--mono); font-size: 0.85rem; font-weight: 500;
+      color: var(--text);
+    }
+    @media (max-width: 768px) { .security-grid { grid-template-columns: 1fr 1fr; } }
 
-    /* Footer */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 32px 0;
-      text-align: center;
-      font-size: 0.875rem;
-      color: var(--text-secondary);
+    /* ── Swagger preview ── */
+    .swagger-preview {
+      margin-top: 48px;
+      border-radius: 12px; overflow: hidden;
+      border: 1px solid var(--border-light);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
     }
-    footer a { color: var(--accent); text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
+    .swagger-preview img { width: 100%; display: block; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border); padding: 40px 0;
+      text-align: center; font-size: 0.85rem; color: var(--text-muted);
+    }
+    footer a { color: var(--text-dim); text-decoration: none; }
+    footer a:hover { color: var(--text); }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px; background: var(--border);
+      margin: 0 auto; max-width: 1080px;
+    }
   </style>
 </head>
 <body>
 
+  <!-- Nav -->
+  <nav>
+    <div class="container">
+      <a href="#" class="brand">
+        <svg viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="ng" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#818cf8"/>
+              <stop offset="100%" stop-color="#6366f1"/>
+            </linearGradient>
+          </defs>
+          <path d="M256 60 L432 138 C432 138 440 310 256 452 C72 310 80 138 80 138 Z" fill="url(#ng)"/>
+          <circle cx="256" cy="210" r="52" fill="#0a0a0f"/>
+          <path d="M230 240 L226 340 C226 348 234 354 256 354 C278 354 286 348 286 340 L282 240 Z" fill="#0a0a0f"/>
+        </svg>
+        AuthGuard
+      </a>
+      <div class="links">
+        <a href="#flow">Flow</a>
+        <a href="#stack">Stack</a>
+        <a href="#api">API</a>
+        <a href="#security">Security</a>
+        <a href="https://github.com/KianAttar/authguard" target="_blank">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
   <div class="hero">
-    <h1>AuthGuard</h1>
-    <p>A drop-in authentication microservice. Handles registration, login, MFA, SSO, and session management so your apps don't have to.</p>
+    <div class="logo">
+      <svg viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="hg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="rgba(129,140,248,0.2)"/>
+            <stop offset="100%" stop-color="rgba(99,102,241,0.08)"/>
+          </linearGradient>
+          <linearGradient id="hg2" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#818cf8"/>
+            <stop offset="100%" stop-color="#6366f1"/>
+          </linearGradient>
+        </defs>
+        <path d="M256 28 L462 120 C462 120 472 320 256 484 C40 320 50 120 50 120 Z" fill="url(#hg)"/>
+        <path d="M256 60 L432 138 C432 138 440 310 256 452 C72 310 80 138 80 138 Z" fill="url(#hg2)"/>
+        <circle cx="256" cy="210" r="52" fill="#0a0a0f"/>
+        <path d="M230 240 L226 340 C226 348 234 354 256 354 C278 354 286 348 286 340 L282 240 Z" fill="#0a0a0f"/>
+      </svg>
+    </div>
+    <h1><span>AuthGuard</span></h1>
+    <p class="subtitle">
+      A drop-in authentication microservice. Handles registration, login, MFA, SSO, and session management so your apps don't have to.
+    </p>
+    <a href="https://github.com/KianAttar/authguard" target="_blank" class="cta">
+      View on GitHub
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M6.22 3.22a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 010-1.06z"/></svg>
+    </a>
   </div>
 
-  <section>
+  <div class="divider"></div>
+
+  <!-- Auth Flow -->
+  <section id="flow">
     <div class="container">
-      <h2>Screenshots</h2>
-      <div class="screenshots">
-        <div class="screenshot">
-          <img src="screenshots/login.png" alt="Login page" loading="lazy">
-          <div class="caption">Sign In</div>
+      <div class="section-label">Authentication Flow</div>
+      <h2>How it works</h2>
+      <p class="section-desc">Users sign up or log in with email/password or Google SSO. If MFA is enabled, a 6-digit code is sent to their email for verification.</p>
+
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-step-info">
+            <div class="step-num">01</div>
+            <h3>Sign In</h3>
+            <p>Users authenticate with email/password or continue with Google via OAuth 2.0 with PKCE. Passwords are validated against bcrypt hashes with 14 salt rounds.</p>
+          </div>
+          <div class="flow-step-img">
+            <img src="screenshots/login.png" alt="Sign in page" loading="lazy">
+          </div>
         </div>
-        <div class="screenshot">
-          <img src="screenshots/signup.png" alt="Sign up page" loading="lazy">
-          <div class="caption">Sign Up</div>
+
+        <div class="flow-step reverse">
+          <div class="flow-step-info">
+            <div class="step-num">02</div>
+            <h3>Sign Up</h3>
+            <p>New users register with name, email, and a strong password. Server-side Zod schemas validate all fields. Duplicate emails are rejected with clear feedback.</p>
+          </div>
+          <div class="flow-step-img">
+            <img src="screenshots/signup.png" alt="Sign up page" loading="lazy">
+          </div>
         </div>
-        <div class="screenshot">
-          <img src="screenshots/mfa.png" alt="MFA verification page" loading="lazy">
-          <div class="caption">MFA Verification</div>
+
+        <div class="flow-step">
+          <div class="flow-step-info">
+            <div class="step-num">03</div>
+            <h3>MFA Verification</h3>
+            <p>When MFA is enabled, a 6-digit OTP is sent via email. Codes are bcrypt-hashed in storage. After 10 failed attempts, a 15-minute cooldown kicks in.</p>
+          </div>
+          <div class="flow-step-img">
+            <img src="screenshots/mfa.png" alt="MFA verification page" loading="lazy">
+          </div>
         </div>
       </div>
     </div>
   </section>
 
-  <section style="background: var(--surface);">
+  <div class="divider"></div>
+
+  <!-- Tech Stack -->
+  <section id="stack">
     <div class="container">
-      <h2>Architecture</h2>
-      <div class="arch-grid">
-        <div class="arch-card">
+      <div class="section-label">Architecture</div>
+      <h2>Tech Stack</h2>
+      <p class="section-desc">Split into a React client and Express server, deployed via Kubernetes with NGINX ingress and TLS.</p>
+
+      <div class="stack-grid">
+        <div class="stack-card">
           <h3>Server</h3>
-          <p>REST API handling auth flows, token management, and session persistence.</p>
-          <div class="tech">
-            <span class="tag">Express.js</span>
-            <span class="tag">TypeScript</span>
-            <span class="tag">MongoDB</span>
-            <span class="tag">Mongoose</span>
-            <span class="tag">Jose (JWT)</span>
-            <span class="tag">AWS SES</span>
-            <span class="tag">OpenID Connect</span>
+          <p>REST API handling auth flows, token management, and sessions.</p>
+          <div class="stack-tags">
+            <span class="stack-tag">Express.js</span>
+            <span class="stack-tag">TypeScript</span>
+            <span class="stack-tag">MongoDB</span>
+            <span class="stack-tag">Jose</span>
+            <span class="stack-tag">AWS SES</span>
           </div>
         </div>
-        <div class="arch-card">
+        <div class="stack-card">
           <h3>Client</h3>
-          <p>Login, registration, and MFA verification UI with real-time form validation.</p>
-          <div class="tech">
-            <span class="tag">React 18</span>
-            <span class="tag">Ant Design</span>
-            <span class="tag">Tailwind CSS</span>
-            <span class="tag">React Hook Form</span>
-            <span class="tag">Zod</span>
-            <span class="tag">Vite</span>
+          <p>Login, registration, and MFA UI with real-time validation.</p>
+          <div class="stack-tags">
+            <span class="stack-tag">React 18</span>
+            <span class="stack-tag">Ant Design</span>
+            <span class="stack-tag">Tailwind</span>
+            <span class="stack-tag">Zod</span>
+            <span class="stack-tag">Vite</span>
           </div>
         </div>
-        <div class="arch-card">
+        <div class="stack-card">
           <h3>Infrastructure</h3>
-          <p>Containerized deployment with Kubernetes orchestration and NGINX ingress.</p>
-          <div class="tech">
-            <span class="tag">Docker</span>
-            <span class="tag">Kubernetes</span>
-            <span class="tag">Skaffold</span>
-            <span class="tag">NGINX Ingress</span>
-            <span class="tag">TLS</span>
+          <p>Containerized deployment with K8s orchestration.</p>
+          <div class="stack-tags">
+            <span class="stack-tag">Docker</span>
+            <span class="stack-tag">Kubernetes</span>
+            <span class="stack-tag">Skaffold</span>
+            <span class="stack-tag">NGINX</span>
+            <span class="stack-tag">TLS</span>
           </div>
         </div>
-        <div class="arch-card">
+        <div class="stack-card">
           <h3>Auth Flow</h3>
-          <p>Stateful sessions with JWT access tokens, PKCE OAuth, and email-based MFA challenges.</p>
-          <div class="tech">
-            <span class="tag">ES256 JWT</span>
-            <span class="tag">Key Rotation</span>
-            <span class="tag">PKCE</span>
-            <span class="tag">bcrypt</span>
-            <span class="tag">Rate Limiting</span>
+          <p>Stateful sessions with JWT access tokens and PKCE OAuth.</p>
+          <div class="stack-tags">
+            <span class="stack-tag">ES256</span>
+            <span class="stack-tag">Key Rotation</span>
+            <span class="stack-tag">PKCE</span>
+            <span class="stack-tag">bcrypt</span>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <section>
-    <div class="container">
-      <h2>Features</h2>
-      <div class="features">
-        <div class="feature">
-          <h3>Email/Password Auth</h3>
-          <p>Registration and login with bcrypt password hashing (14 salt rounds) and server-side Zod schema validation.</p>
-        </div>
-        <div class="feature">
-          <h3>Multi-Factor Authentication</h3>
-          <p>Email-based 6-digit OTP codes with bcrypt-hashed storage, 60-second resend cooldown, and automatic lockout after 10 failed attempts.</p>
-        </div>
-        <div class="feature">
-          <h3>Social Sign-On</h3>
-          <p>Google and Microsoft OAuth via OpenID Connect with PKCE code challenge for security. Supports account linking.</p>
-        </div>
-        <div class="feature">
-          <h3>Session Management</h3>
-          <p>JWT session tokens (90-day TTL) with ES256 signing, dual-key rotation for access tokens, and MongoDB TTL-based cleanup.</p>
-        </div>
-        <div class="feature">
-          <h3>Account Linking</h3>
-          <p>Connect multiple SSO providers to a single account. Unlink providers without losing access.</p>
-        </div>
-        <div class="feature">
-          <h3>API Documentation</h3>
-          <p>Full OpenAPI 3.0 specification with Swagger UI available in development mode.</p>
-        </div>
-      </div>
-    </div>
-  </section>
+  <div class="divider"></div>
 
-  <section style="background: var(--surface);">
+  <!-- API Reference -->
+  <section id="api">
     <div class="container">
+      <div class="section-label">Endpoints</div>
       <h2>API Reference</h2>
-      <div class="api-table-wrapper">
+      <p class="section-desc">Full OpenAPI 3.0 spec with Swagger UI available in development. All endpoints are under <code style="font-family: var(--mono); background: var(--surface); padding: 2px 6px; border-radius: 4px; font-size: 0.85rem;">/api/accounts</code>.</p>
+
+      <div class="api-table-wrap">
         <table>
           <thead>
             <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
           </thead>
           <tbody>
-            <tr><td>POST</td><td>/auth/signin</td><td>Email/password login</td></tr>
-            <tr><td>POST</td><td>/auth/signup</td><td>Registration</td></tr>
-            <tr><td>DELETE</td><td>/auth/signout</td><td>Logout (clears session)</td></tr>
-            <tr><td>GET</td><td>/auth/signin/sso/{provider}</td><td>OAuth redirect (Google, Microsoft)</td></tr>
-            <tr><td>GET</td><td>/auth/signin/sso/{provider}/callback</td><td>OAuth callback</td></tr>
-            <tr><td>POST</td><td>/auth/mfa/challenge</td><td>Get MFA challenge details</td></tr>
-            <tr><td>POST</td><td>/auth/mfa/challenge/send</td><td>Send or resend MFA code</td></tr>
-            <tr><td>POST</td><td>/auth/mfa/challenge/verify</td><td>Verify MFA code</td></tr>
-            <tr><td>GET</td><td>/users/me</td><td>Current user info</td></tr>
-            <tr><td>GET</td><td>/users/me/linked-accounts</td><td>List linked SSO accounts</td></tr>
-            <tr><td>DELETE</td><td>/users/me/linked-accounts/{provider}</td><td>Unlink SSO account</td></tr>
-            <tr><td>GET</td><td>/users/me/sessions</td><td>List active sessions</td></tr>
-            <tr><td>DELETE</td><td>/users/me/sessions/{id}</td><td>Revoke a session</td></tr>
+            <tr><td class="method-post">POST</td><td>/auth/signin</td><td>Email/password login</td></tr>
+            <tr><td class="method-post">POST</td><td>/auth/signup</td><td>Registration</td></tr>
+            <tr><td class="method-delete">DELETE</td><td>/auth/signout</td><td>Logout (clears session)</td></tr>
+            <tr><td class="method-get">GET</td><td>/auth/signin/sso/{provider}</td><td>OAuth redirect (Google, Microsoft)</td></tr>
+            <tr><td class="method-get">GET</td><td>/auth/signin/sso/{provider}/callback</td><td>OAuth callback</td></tr>
+            <tr><td class="method-post">POST</td><td>/auth/mfa/challenge</td><td>Get MFA challenge details</td></tr>
+            <tr><td class="method-post">POST</td><td>/auth/mfa/challenge/send</td><td>Send or resend MFA code</td></tr>
+            <tr><td class="method-post">POST</td><td>/auth/mfa/challenge/verify</td><td>Verify MFA code</td></tr>
+            <tr><td class="method-get">GET</td><td>/users/me</td><td>Current user info</td></tr>
+            <tr><td class="method-get">GET</td><td>/users/me/linked-accounts</td><td>List linked SSO accounts</td></tr>
+            <tr><td class="method-delete">DELETE</td><td>/users/me/linked-accounts/{provider}</td><td>Unlink SSO account</td></tr>
+            <tr><td class="method-get">GET</td><td>/users/me/sessions</td><td>List active sessions</td></tr>
+            <tr><td class="method-delete">DELETE</td><td>/users/me/sessions/{id}</td><td>Revoke a session</td></tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="swagger-preview">
+        <img src="screenshots/swagger.png" alt="Swagger UI documentation" loading="lazy">
       </div>
     </div>
   </section>
 
-  <section>
+  <div class="divider"></div>
+
+  <!-- Security -->
+  <section id="security">
     <div class="container">
+      <div class="section-label">Hardened</div>
       <h2>Security Design</h2>
+      <p class="section-desc">Every layer is built with security in mind — from password storage to token signing to rate limiting.</p>
+
       <div class="security-grid">
-        <div class="sec-item">
+        <div class="sec-card">
           <div class="label">Password Hashing</div>
           <div class="value">bcrypt (14 rounds)</div>
         </div>
-        <div class="sec-item">
+        <div class="sec-card">
           <div class="label">Token Signing</div>
           <div class="value">ES256 (ECDSA)</div>
         </div>
-        <div class="sec-item">
+        <div class="sec-card">
           <div class="label">Key Management</div>
           <div class="value">Dual-key Rotation</div>
         </div>
-        <div class="sec-item">
+        <div class="sec-card">
           <div class="label">OAuth Flow</div>
           <div class="value">PKCE + State</div>
         </div>
-        <div class="sec-item">
+        <div class="sec-card">
           <div class="label">MFA Codes</div>
           <div class="value">bcrypt-hashed</div>
         </div>
-        <div class="sec-item">
+        <div class="sec-card">
           <div class="label">Rate Limiting</div>
-          <div class="value">10 attempts / 15min</div>
+          <div class="value">10 req / 15min</div>
         </div>
-        <div class="sec-item">
+        <div class="sec-card">
           <div class="label">Session TTL</div>
           <div class="value">90 days (auto-cleanup)</div>
         </div>
-        <div class="sec-item">
+        <div class="sec-card">
           <div class="label">Access Token</div>
           <div class="value">1 hour expiry</div>
         </div>
@@ -347,9 +481,10 @@
     </div>
   </section>
 
+  <!-- Footer -->
   <footer>
     <div class="container">
-      <p>AuthGuard &mdash; <a href="https://github.com/hassanattar" target="_blank">Hassan Attar</a></p>
+      <p>AuthGuard &mdash; <a href="https://github.com/KianAttar" target="_blank">Kian Attar</a></p>
     </div>
   </footer>
 

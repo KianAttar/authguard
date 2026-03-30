@@ -7,7 +7,7 @@ build:
     local:
         push: false
     artifacts:
-        - image: hassanattar/accounts-service
+        - image: kianattar/accounts-service
           context: ..
           docker:
               dockerfile: Dockerfile

@@ -14,7 +14,7 @@ spec:
         spec:
             containers:
                 - name: accounts
-                  image: hassanattar/accounts-service
+                  image: kianattar/accounts-service
                   envFrom:
                       - secretRef:
                             name: dev-env-secrets

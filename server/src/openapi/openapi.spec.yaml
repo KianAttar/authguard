@@ -4,7 +4,7 @@ info:
     title: AuthGuard
     version: 0.0.0
     contact:
-        name: Hassan Attar
+        name: Kian Attar
         email: h.a.develops@gmail.com
 servers:
     - url: "https://dev-server.com/api/accounts"
